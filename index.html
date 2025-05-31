@@ -1,0 +1,1843 @@
+<td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">
+                                ¥{year.income.toLocaleString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">
+                                ¥{year.expense.toLocaleString()}
+                              </td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
+                                year.balance >= 0 ? 'text-blue-600' : 'text-orange-600'
+                              }`}>
+                                ¥{year.balance.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 支出分析タブ */}
+              {activeTab === 'analysis' && (
+                <>
+                  <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-semibold text-gray-700 flex items-center">
+                        <PieChart className="h-6 w-6 mr-2" />
+                        支出分析
+                      </h2>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm font-medium text-gray-700">月:</label>
+                          <select
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          >
+                            {Array.from({length: 12}, (_, i) => {
+                              const month = `${selectedMonth.slice(0, 4)}-${(i + 1).toString().padStart(2, '0')}`;
+                              return (
+                                <option key={month} value={month}>
+                                  {new Date(month + '-01').toLocaleDateString('ja-JP', { month: 'long' })}
+                                </option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 月別分析 */}
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">月別支出分析</h3>
+                      {categoryAnalysis.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <PieChart className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p>選択した月に支出データがありません</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                          {/* 円グラフ */}
+                          <div className="bg-gray-50 p-6 rounded-lg">
+                            <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">支出割合</h4>
+                            <div className="flex justify-center mb-4">
+                              <svg width="300" height="300" viewBox="0 0 300 300" className="transform -rotate-90">
+                                {(() => {
+                                  let cumulativePercentage = 0;
+                                  const colors = [
+                                    '#ef4444', '#3b82f6', '#10b981', '#f59e0b',
+                                    '#a855f7', '#ec4899', '#6366f1', '#6b7280'
+                                  ];
+                                  
+                                  return categoryAnalysis.map((item, index) => {
+                                    const percentage = parseFloat(item.percentage);
+                                    const startAngle = (cumulativePercentage / 100) * 360;
+                                    const endAngle = ((cumulativePercentage + percentage) / 100) * 360;
+                                    cumulativePercentage += percentage;
+                                    
+                                    const startAngleRad = (startAngle * Math.PI) / 180;
+                                    const endAngleRad = (endAngle * Math.PI) / 180;
+                                    
+                                    const largeArcFlag = percentage > 50 ? 1 : 0;
+                                    const radius = 120;
+                                    const centerX = 150;
+                                    const centerY = 150;
+                                    
+                                    const x1 = centerX + radius * Math.cos(startAngleRad);
+                                    const y1 = centerY + radius * Math.sin(startAngleRad);
+                                    const x2 = centerX + radius * Math.cos(endAngleRad);
+                                    const y2 = centerY + radius * Math.sin(endAngleRad);
+                                    
+                                    const pathData = [
+                                      `M ${centerX} ${centerY}`,
+                                      `L ${x1} ${y1}`,
+                                      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                      'Z'
+                                    ].join(' ');
+                                    
+                                    return (
+                                      <path
+                                        key={item.category}
+                                        d={pathData}
+                                        fill={colors[index % colors.length]}
+                                        stroke="white"
+                                        strokeWidth="2"
+                                        className="hover:opacity-80 transition-opacity"
+                                      />
+                                    );
+                                  });
+                                })()}
+                              </svg>
+                            </div>
+                            
+                            {/* 凡例 */}
+                            <div className="grid grid-cols-2 gap-2">
+                              {categoryAnalysis.map((item, index) => {
+                                const colors = [
+                                  'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+                                  'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-gray-500'
+                                ];
+                                const color = colors[index % colors.length];
+                                
+                                return (
+                                  <div key={item.category} className="flex items-center space-x-2">
+                                    <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                                    <span className="text-sm text-gray-700 truncate">{item.category}</span>
+                                    <span className="text-xs text-gray-500">{item.percentage}%</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          
+                          {/* 詳細リスト */}
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-700 mb-4">詳細データ</h4>
+                            <div className="mb-6">
+                              <p className="text-lg font-semibold text-gray-700 mb-2">
+                                {new Date(selectedMonth + '-01').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}の総支出: 
+                                <span className="text-red-600 ml-2">¥{monthlyExpense.toLocaleString()}</span>
+                              </p>
+                            </div>
+
+                            <div className="space-y-4">
+                              {categoryAnalysis.map((item, index) => {
+                                const colors = [
+                                  'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+                                  'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-gray-500'
+                                ];
+                                const color = colors[index % colors.length];
+                                
+                                return (
+                                  <div key={item.category} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center space-x-3">
+                                      <div className={`w-4 h-4 rounded-full ${color}`}></div>
+                                      <span className="font-medium text-gray-800">{item.category}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-4">
+                                      <div className="flex-1 bg-gray-200 rounded-full h-2 w-32">
+                                        <div 
+                                          className={`h-2 rounded-full ${color}`}
+                                          style={{ width: `${item.percentage}%` }}
+                                        ></div>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-gray-800">¥{item.amount.toLocaleString()}</p>
+                                        <p className="text-sm text-gray-600">{item.percentage}%</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* 年別分析 */}
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">年別支出分析</h3>
+                      <div className="flex items-center justify-between mb-4">
+                        <span></span>
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm font-medium text-gray-700">年:</label>
+                          <select
+                            value={selectedYear}
+                            onChange={(e) => setSelectedYear(e.target.value)}
+                            className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          >
+                            {[...Array(10)].map((_, i) => {
+                              const year = new Date().getFullYear() - i;
+                              return (
+                                <option key={year} value={year}>{year}年</option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      </div>
+                      
+                      {yearlyCategoryAnalysis.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <PieChart className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p>選択した年に支出データがありません</p>
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                          {/* 円グラフ */}
+                          <div className="bg-gray-50 p-6 rounded-lg">
+                            <h4 className="text-lg font-semibold text-gray-700 mb-4 text-center">年間支出割合</h4>
+                            <div className="flex justify-center mb-4">
+                              <svg width="300" height="300" viewBox="0 0 300 300" className="transform -rotate-90">
+                                {(() => {
+                                  let cumulativePercentage = 0;
+                                  const colors = [
+                                    '#ef4444', '#3b82f6', '#10b981', '#f59e0b',
+                                    '#a855f7', '#ec4899', '#6366f1', '#6b7280'
+                                  ];
+                                  
+                                  return yearlyCategoryAnalysis.map((item, index) => {
+                                    const percentage = parseFloat(item.percentage);
+                                    const startAngle = (cumulativePercentage / 100) * 360;
+                                    const endAngle = ((cumulativePercentage + percentage) / 100) * 360;
+                                    cumulativePercentage += percentage;
+                                    
+                                    const startAngleRad = (startAngle * Math.PI) / 180;
+                                    const endAngleRad = (endAngle * Math.PI) / 180;
+                                    
+                                    const largeArcFlag = percentage > 50 ? 1 : 0;
+                                    const radius = 120;
+                                    const centerX = 150;
+                                    const centerY = 150;
+                                    
+                                    const x1 = centerX + radius * Math.cos(startAngleRad);
+                                    const y1 = centerY + radius * Math.sin(startAngleRad);
+                                    const x2 = centerX + radius * Math.cos(endAngleRad);
+                                    const y2 = centerY + radius * Math.sin(endAngleRad);
+                                    
+                                    const pathData = [
+                                      `M ${centerX} ${centerY}`,
+                                      `L ${x1} ${y1}`,
+                                      `A ${radius} ${radius} 0 ${largeArcFlag} 1 ${x2} ${y2}`,
+                                      'Z'
+                                    ].join(' ');
+                                    
+                                    return (
+                                      <path
+                                        key={item.category}
+                                        d={pathData}
+                                        fill={colors[index % colors.length]}
+                                        stroke="white"
+                                        strokeWidth="2"
+                                        className="hover:opacity-80 transition-opacity"
+                                      />
+                                    );
+                                  });
+                                })()}
+                              </svg>
+                            </div>
+                            
+                            {/* 凡例 */}
+                            <div className="grid grid-cols-2 gap-2">
+                              {yearlyCategoryAnalysis.map((item, index) => {
+                                const colors = [
+                                  'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+                                  'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-gray-500'
+                                ];
+                                const color = colors[index % colors.length];
+                                
+                                return (
+                                  <div key={item.category} className="flex items-center space-x-2">
+                                    <div className={`w-3 h-3 rounded-full ${color}`}></div>
+                                    <span className="text-sm text-gray-700 truncate">{item.category}</span>
+                                    <span className="text-xs text-gray-500">{item.percentage}%</span>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          
+                          {/* 詳細リスト */}
+                          <div>
+                            <h4 className="text-lg font-semibold text-gray-700 mb-4">詳細データ</h4>
+                            <div className="mb-6">
+                              <p className="text-lg font-semibold text-gray-700 mb-2">
+                                {selectedYear}年の総支出: 
+                                <span className="text-red-600 ml-2">¥{yearlyExpense.toLocaleString()}</span>
+                              </p>
+                            </div>
+
+                            <div className="space-y-4">
+                              {yearlyCategoryAnalysis.map((item, index) => {
+                                const colors = [
+                                  'bg-red-500', 'bg-blue-500', 'bg-green-500', 'bg-yellow-500',
+                                  'bg-purple-500', 'bg-pink-500', 'bg-indigo-500', 'bg-gray-500'
+                                ];
+                                const color = colors[index % colors.length];
+                                
+                                return (
+                                  <div key={item.category} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                                    <div className="flex items-center space-x-3">
+                                      <div className={`w-4 h-4 rounded-full ${color}`}></div>
+                                      <span className="font-medium text-gray-800">{item.category}</span>
+                                    </div>
+                                    
+                                    <div className="flex items-center space-x-4">
+                                      <div className="flex-1 bg-gray-200 rounded-full h-2 w-32">
+                                        <div 
+                                          className={`h-2 rounded-full ${color}`}
+                                          style={{ width: `${item.percentage}%` }}
+                                        ></div>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="font-semibold text-gray-800">¥{item.amount.toLocaleString()}</p>
+                                        <p className="text-sm text-gray-600">{item.percentage}%</p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 共有・バックアップタブ */}
+              {activeTab === 'backup' && (
+                <>
+                  <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                    <h2 className="text-xl font-semibold text-gray-700 mb-6 flex items-center">
+                      <Share2 className="h-6 w-6 mr-2" />
+                      データの共有・バックアップ
+                    </h2>
+
+                    {/* データエクスポート */}
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">💾 データのバックアップ</h3>
+                      
+                      {/* 期間選択 */}
+                      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 mb-4">
+                        <h4 className="font-semibold text-gray-700 mb-3">保存期間を選択</h4>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-4">
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="exportPeriod"
+                              value="all"
+                              checked={exportPeriod === 'all'}
+                              onChange={(e) => setExportPeriod(e.target.value)}
+                              className="text-blue-500"
+                            />
+                            <span className="text-sm">全期間</span>
+                          </label>
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="exportPeriod"
+                              value="current-month"
+                              checked={exportPeriod === 'current-month'}
+                              onChange={(e) => setExportPeriod(e.target.value)}
+                              className="text-blue-500"
+                            />
+                            <span className="text-sm">今月</span>
+                          </label>
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="exportPeriod"
+                              value="current-year"
+                              checked={exportPeriod === 'current-year'}
+                              onChange={(e) => setExportPeriod(e.target.value)}
+                              className="text-blue-500"
+                            />
+                            <span className="text-sm">今年</span>
+                          </label>
+                          <label className="flex items-center space-x-2 cursor-pointer">
+                            <input
+                              type="radio"
+                              name="exportPeriod"
+                              value="custom"
+                              checked={exportPeriod === 'custom'}
+                              onChange={(e) => setExportPeriod(e.target.value)}
+                              className="text-blue-500"
+                            />
+                            <span className="text-sm">期間指定</span>
+                          </label>
+                        </div>
+                        
+                        {/* カスタム期間設定 */}
+                        {exportPeriod === 'custom' && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 pt-4 border-t border-gray-300">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">開始日</label>
+                              <input
+                                type="date"
+                                value={exportStartDate}
+                                onChange={(e) => setExportStartDate(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">終了日</label>
+                              <input
+                                type="date"
+                                value={exportEndDate}
+                                onChange={(e) => setExportEndDate(e.target.value)}
+                                className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                              />
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* 選択された期間の情報表示 */}
+                        <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                          <p className="text-sm text-blue-700">
+                            📊 対象件数: <strong>{getFilteredTransactions().length}件</strong>
+                            {exportPeriod === 'current-month' && ` (${new Date().getFullYear()}年${new Date().getMonth() + 1}月)`}
+                            {exportPeriod === 'current-year' && ` (${new Date().getFullYear()}年)`}
+                            {exportPeriod === 'custom' && exportStartDate && exportEndDate && ` (${exportStartDate} ～ ${exportEndDate})`}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      <div className="bg-blue-50 p-4 rounded-lg border border-blue-200 mb-4">
+                        <p className="text-sm text-blue-700 mb-2">
+                          家計簿データをファイルとしてダウンロードできます。このファイルを使って他のデバイスでデータを復元したり、バックアップとして保存できます。
+                        </p>
+                      </div>
+                      <div className="flex flex-col sm:flex-row gap-2">
+                        <button
+                          onClick={exportData}
+                          disabled={exportPeriod === 'custom' && (!exportStartDate || !exportEndDate)}
+                          className="flex items-center justify-center px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          <Download className="h-5 w-5 mr-2" />
+                          JSONで保存
+                        </button>
+                        <button
+                          onClick={exportCSV}
+                          disabled={exportPeriod === 'custom' && (!exportStartDate || !exportEndDate)}
+                          className="flex items-center justify-center px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors font-medium"
+                        >
+                          <Download className="h-5 w-5 mr-2" />
+                          CSVで保存
+                        </button>
+                      </div>
+                      <div className="mt-3 text-xs text-gray-600">
+                        <p><strong>JSON:</strong> 完全なデータ保存（推奨）</p>
+                        <p><strong>CSV:</strong> Excel・スプレッドシートで開ける形式</p>
+                      </div>
+                    </div>
+
+                    {/* データインポート */}
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">📂 データの復元</h3>
+                      <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200 mb-4">
+                        <p className="text-sm text-yellow-700 mb-2">
+                          ⚠️ 注意: データを復元すると、現在のデータは上書きされます。必要に応じて事前にバックアップを取ってください。
+                        </p>
+                        <p className="text-sm text-yellow-700">
+                          📄 対応形式: JSON、CSV（Excel等で編集可能）
+                        </p>
+                      </div>
+                      <div className="flex items-center">
+                        <input
+                          type="file"
+                          accept=".json,.csv"
+                          onChange={importData}
+                          className="hidden"
+                          id="import-file"
+                        />
+                        <label
+                          htmlFor="import-file"
+                          className="flex items-center px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 transition-colors font-medium cursor-pointer"
+                        >
+                          <Upload className="h-5 w-5 mr-2" />
+                          ファイルを選択して復元
+                        </label>
+                      </div>
+                    </div>
+
+                    {/* URL共有 */}
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">🔗 URLで共有</h3>
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200 mb-4">
+                        <p className="text-sm text-green-700 mb-2">
+                          データを含むURLを生成して、家族や他のデバイスと共有できます。URLにアクセスするだけでデータが読み込まれます。
+                        </p>
+                      </div>
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={generateShareUrl}
+                          className="flex items-center px-6 py-3 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors font-medium"
+                        >
+                          <Share2 className="h-5 w-5 mr-2" />
+                          共有URLを生成
+                        </button>
+                        {shareUrl && (
+                          <button
+                            onClick={copyToClipboard}
+                            className="flex items-center px-6 py-3 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors font-medium"
+                          >
+                            <Copy className="h-5 w-5 mr-2" />
+                            URLをコピー
+                          </button>
+                        )}
+                      </div>
+                      
+                      {shareUrl && (
+                        <div className="mt-4 p-3 bg-gray-100 rounded-lg">
+                          <p className="text-sm text-gray-600 mb-2">生成された共有URL:</p>
+                          <div className="flex items-center space-x-2">
+                            <input
+                              type="text"
+                              value={shareUrl}
+                              readOnly
+                              className="flex-1 p-2 border border-gray-300 rounded text-sm bg-white"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      
+                      {showCopyMessage && (
+                        <div className="mt-2 p-2 bg-green-100 text-green-700 rounded text-sm">
+                          ✅ URLをクリップボードにコピーしました！
+                        </div>
+                      )}
+                    </div>
+
+                    {/* データクリア */}
+                    <div className="mb-8">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">🗑️ データの削除</h3>
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200 mb-4">
+                        <p className="text-sm text-red-700 mb-2">
+                          ⚠️ 警告: この操作を実行すると、すべての取引データが完全に削除されます。この操作は元に戻すことができません。
+                        </p>
+                      </div>
+                      <button
+                        onClick={clearAllData}
+                        className="flex items-center px-6 py-3 bg-red-500 text-white rounded-lg hover:bg-red-600 transition-colors font-medium"
+                      >
+                        <Trash2 className="h-5 w-5 mr-2" />
+                        すべてのデータを削除
+                      </button>
+                    </div>
+
+                    {/* 使い方ガイド */}
+                    <div className="bg-gray-50 p-6 rounded-lg">
+                      <h3 className="text-lg font-semibold text-gray-700 mb-4">📖 使い方ガイド</h3>
+                      <div className="space-y-4 text-sm text-gray-600">
+                        <div>
+                          <h4 className="font-semibold text-gray-700">💾 自動保存機能</h4>
+                          <p>データは入力と同時に自動的にブラウザに保存されます。ブラウザを閉じても、再度開くときにデータが復元されます。</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-700">🏠 家族間でのデータ共有</h4>
+                          <p>1. 「共有URLを生成」でURLを作成</p>
+                          <p>2. 「URLをコピー」でクリップボードにコピー</p>
+                          <p>4. 受け取った人がURLにアクセス</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-700">📊 CSVファイルでの活用</h4>
+                          <p>1. 「CSVで保存」でデータをダウンロード</p>
+                          <p>2. Excel・Googleスプレッドシートで開いて編集</p>
+                          <p>3. 編集後のCSVファイルを「ファイルを選択して復元」でインポート</p>
+                          <p>4. グラフ作成や詳細分析に活用</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-700">📱 他のデバイスでの利用</h4>
+                          <p>1. 「JSONで保存」でバックアップファイルを保存</p>
+                          <p>2. ファイルを他のデバイスに転送（メール添付、クラウドストレージなど）</p>
+                          <p>3. 他のデバイスで「ファイルを選択して復元」</p>
+                        </div>
+                        <div>
+                          <h4 className="font-semibold text-gray-700">💾 定期的なバックアップ</h4>
+                          <p>月末などに定期的に「JSONで保存」を実行して、重要なデータを安全に保管することをお勧めします。</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          );
+        };
+
+        ReactDOM.render(<HouseholdBudgetApp />, document.getElementById('root'));
+    </script>
+</body>
+</html>
+                                                    <p className="text-sm text-green-700">
+                            💾 データは自動的に保存されています。ブラウザを閉じても安心です！
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* 入力フォーム */}
+                  <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                    <h2 className="text-xl font-semibold mb-4 text-gray-700">
+                      {editingTransaction ? '取引を編集' : '新しい取引を追加'}
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">種類</label>
+                        <div className="flex space-x-4">
+                          <button
+                            onClick={() => setType('income')}
+                            className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                              type === 'income' 
+                                ? 'bg-green-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            <PlusCircle className="h-4 w-4 mr-2" />
+                            収入
+                          </button>
+                          <button
+                            onClick={() => setType('expense')}
+                            className={`flex items-center px-4 py-2 rounded-lg font-medium transition-colors ${
+                              type === 'expense' 
+                                ? 'bg-red-500 text-white' 
+                                : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
+                            }`}
+                          >
+                            <MinusCircle className="h-4 w-4 mr-2" />
+                            支出
+                          </button>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">金額</label>
+                        <input
+                          type="number"
+                          value={amount}
+                          onChange={(e) => setAmount(e.target.value)}
+                          placeholder="0"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">カテゴリ</label>
+                        <select
+                          value={category}
+                          onChange={(e) => setCategory(e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                          <option value="">カテゴリを選択</option>
+                          {type === 'expense' ? (
+                            <>
+                              <optgroup label="固定費">
+                                {expenseCategories['固定費'].map(cat => (
+                                  <option key={cat.name} value={cat.name}>{cat.name}</option>
+                                ))}
+                              </optgroup>
+                              <optgroup label="変動費">
+                                {expenseCategories['変動費'].map(cat => (
+                                  <option key={cat.name} value={cat.name}>{cat.name}</option>
+                                ))}
+                              </optgroup>
+                            </>
+                          ) : (
+                            incomeCategories.map(cat => (
+                              <option key={cat} value={cat}>{cat}</option>
+                            ))
+                          )}
+                        </select>
+                        
+                        {/* カテゴリの説明 */}
+                        {category && type === 'expense' && (
+                          <div className="mt-2 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                            <p className="text-sm text-blue-700">
+                              <span className="font-medium">{category}:</span> {getCategoryDescription(category)}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">日付</label>
+                        <input
+                          type="date"
+                          value={transactionDate}
+                          onChange={(e) => setTransactionDate(e.target.value)}
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">説明（任意）</label>
+                        <input
+                          type="text"
+                          value={description}
+                          onChange={(e) => setDescription(e.target.value)}
+                          placeholder="取引の詳細"
+                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex space-x-2">
+                      {editingTransaction ? (
+                        <>
+                          <button
+                            onClick={saveEdit}
+                            disabled={!amount || !category}
+                            className="flex-1 bg-green-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-green-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                          >
+                            <Check className="h-4 w-4 mr-2" />
+                            変更を保存
+                          </button>
+                          <button
+                            onClick={cancelEdit}
+                            className="flex-1 bg-gray-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-gray-600 transition-colors flex items-center justify-center"
+                          >
+                            <X className="h-4 w-4 mr-2" />
+                            キャンセル
+                          </button>
+                        </>
+                      ) : (
+                        <button
+                          onClick={addTransaction}
+                          disabled={!amount || !category}
+                          className="w-full bg-blue-500 text-white py-3 px-4 rounded-lg font-medium hover:bg-blue-600 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                        >
+                          取引を追加
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* フィルター */}
+                  <div className="mb-6">
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => setFilter('all')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          filter === 'all' ? 'bg-blue-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        すべて
+                      </button>
+                      <button
+                        onClick={() => setFilter('income')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          filter === 'income' ? 'bg-green-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        収入のみ
+                      </button>
+                      <button
+                        onClick={() => setFilter('expense')}
+                        className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                          filter === 'expense' ? 'bg-red-500 text-white' : 'bg-white text-gray-700 hover:bg-gray-100'
+                        }`}
+                      >
+                        支出のみ
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* 取引履歴 */}
+                  <div className="bg-white rounded-lg shadow-lg">
+                    <div className="p-6 border-b border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-700">今日の取引履歴</h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        {new Date().toLocaleDateString('ja-JP', { 
+                          year: 'numeric', 
+                          month: 'long', 
+                          day: 'numeric',
+                          weekday: 'long'
+                        })}
+                      </p>
+                    </div>
+                    
+                    <div className="max-h-96 overflow-y-auto">
+                      {todaysTransactions.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                          <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p>今日はまだ取引がありません</p>
+                          <p className="text-sm text-gray-400 mt-1">取引を追加して家計簿を始めましょう</p>
+                        </div>
+                      ) : (
+                        todaysTransactions.map(transaction => (
+                          <div key={transaction.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    transaction.type === 'income' ? 'bg-green-500' : 'bg-red-500'
+                                  }`}></div>
+                                  <div>
+                                    <p className="font-medium text-gray-800">{transaction.category}</p>
+                                    {transaction.description && (
+                                      <p className="text-sm text-gray-600">{transaction.description}</p>
+                                    )}
+                                    <p className="text-xs text-gray-500">{transaction.displayDate}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center space-x-3">
+                                <span className={`font-bold text-lg ${
+                                  transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {transaction.type === 'income' ? '+' : '-'}¥{transaction.amount.toLocaleString()}
+                                </span>
+                                
+                                <button
+                                  onClick={() => editTransaction(transaction)}
+                                  className="text-blue-500 hover:text-blue-700 transition-colors"
+                                  title="編集"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                
+                                <button
+                                  onClick={() => deleteTransaction(transaction.id)}
+                                  className="text-red-500 hover:text-red-700 transition-colors"
+                                  title="削除"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 月別データタブ */}
+              {activeTab === 'monthly' && (
+                <>
+                  {/* 月選択 */}
+                  <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold text-gray-700">月別データ</h2>
+                      <div className="flex items-center space-x-4">
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm font-medium text-gray-700">年:</label>
+                          <select
+                            value={selectedMonth.slice(0, 4)}
+                            onChange={(e) => setSelectedMonth(e.target.value + '-01')}
+                            className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          >
+                            {[...Array(10)].map((_, i) => {
+                              const year = new Date().getFullYear() - i;
+                              return (
+                                <option key={year} value={year}>{year}年</option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <label className="text-sm font-medium text-gray-700">月:</label>
+                          <select
+                            value={selectedMonth.slice(5, 7)}
+                            onChange={(e) => setSelectedMonth(selectedMonth.slice(0, 4) + '-' + e.target.value)}
+                            className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                          >
+                            {[...Array(12)].map((_, i) => {
+                              const month = (i + 1).toString().padStart(2, '0');
+                              const monthName = new Date(2024, i).toLocaleDateString('ja-JP', { month: 'long' });
+                              return (
+                                <option key={month} value={month}>{monthName}</option>
+                              );
+                            })}
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 月別サマリー */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-green-600 text-sm font-medium">月間収入</p>
+                            <p className="text-xl font-bold text-green-700">¥{monthlyIncome.toLocaleString()}</p>
+                          </div>
+                          <TrendingUp className="h-6 w-6 text-green-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-red-600 text-sm font-medium">月間支出</p>
+                            <p className="text-xl font-bold text-red-700">¥{monthlyExpense.toLocaleString()}</p>
+                          </div>
+                          <TrendingDown className="h-6 w-6 text-red-600" />
+                        </div>
+                      </div>
+                      
+                      <div className={`p-4 rounded-lg border ${
+                        (monthlyIncome - monthlyExpense) >= 0 
+                          ? 'bg-blue-50 border-blue-200' 
+                          : 'bg-orange-50 border-orange-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`text-sm font-medium ${
+                              (monthlyIncome - monthlyExpense) >= 0 ? 'text-blue-600' : 'text-orange-600'
+                            }`}>月間収支</p>
+                            <p className={`text-xl font-bold ${
+                              (monthlyIncome - monthlyExpense) >= 0 ? 'text-blue-700' : 'text-orange-700'
+                            }`}>
+                              ¥{(monthlyIncome - monthlyExpense).toLocaleString()}
+                            </p>
+                          </div>
+                          <BarChart3 className={`h-6 w-6 ${
+                            (monthlyIncome - monthlyExpense) >= 0 ? 'text-blue-600' : 'text-orange-600'
+                          }`} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 選択月の取引一覧 */}
+                  <div className="bg-white rounded-lg shadow-lg mb-8">
+                    <div className="p-6 border-b border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-700">
+                        {new Date(selectedMonth + '-01').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}の取引一覧
+                      </h2>
+                      <p className="text-sm text-gray-500 mt-1">取引を編集・削除できます</p>
+                    </div>
+                    
+                    <div className="max-h-96 overflow-y-auto">
+                      {currentMonthData.length === 0 ? (
+                        <div className="p-8 text-center text-gray-500">
+                          <Calendar className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                          <p>この月は取引がありません</p>
+                        </div>
+                      ) : (
+                        currentMonthData.map(transaction => (
+                          <div key={transaction.id} className="p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center space-x-3">
+                                  <div className={`w-3 h-3 rounded-full ${
+                                    transaction.type === 'income' ? 'bg-green-500' : 'bg-red-500'
+                                  }`}></div>
+                                  <div>
+                                    <p className="font-medium text-gray-800">{transaction.category}</p>
+                                    {transaction.description && (
+                                      <p className="text-sm text-gray-600">{transaction.description}</p>
+                                    )}
+                                    <p className="text-xs text-gray-500">{transaction.displayDate}</p>
+                                  </div>
+                                </div>
+                              </div>
+                              
+                              <div className="flex items-center space-x-3">
+                                <span className={`font-bold text-lg ${
+                                  transaction.type === 'income' ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                  {transaction.type === 'income' ? '+' : '-'}¥{transaction.amount.toLocaleString()}
+                                </span>
+                                
+                                <button
+                                  onClick={() => editTransaction(transaction)}
+                                  className="text-blue-500 hover:text-blue-700 transition-colors"
+                                  title="編集"
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </button>
+                                
+                                <button
+                                  onClick={() => {
+                                    if (confirm('この取引を削除しますか？')) {
+                                      deleteTransaction(transaction.id);
+                                    }
+                                  }}
+                                  className="text-red-500 hover:text-red-700 transition-colors"
+                                  title="削除"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 月別履歴 */}
+                  <div className="bg-white rounded-lg shadow-lg">
+                    <div className="p-6 border-b border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-700">月別履歴</h2>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">月</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">収入</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">支出</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">収支</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {monthlyHistory.map(month => (
+                            <tr key={month.month} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {new Date(month.month + '-01').toLocaleDateString('ja-JP', { year: 'numeric', month: 'long' })}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">
+                                ¥{month.income.toLocaleString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">
+                                ¥{month.expense.toLocaleString()}
+                              </td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
+                                month.balance >= 0 ? 'text-blue-600' : 'text-orange-600'
+                              }`}>
+                                ¥{month.balance.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </>
+              )}
+
+              {/* 年別データタブ */}
+              {activeTab === 'yearly' && (
+                <>
+                  {/* 年選択 */}
+                  <div className="bg-white p-6 rounded-lg shadow-lg mb-8">
+                    <div className="flex items-center justify-between mb-4">
+                      <h2 className="text-xl font-semibold text-gray-700 flex items-center">
+                        <CalendarDays className="h-6 w-6 mr-2" />
+                        年別データ
+                      </h2>
+                      <div className="flex items-center space-x-2">
+                        <label className="text-sm font-medium text-gray-700">年を選択:</label>
+                        <select
+                          value={selectedYear}
+                          onChange={(e) => setSelectedYear(e.target.value)}
+                          className="p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        >
+                          {[...Array(10)].map((_, i) => {
+                            const year = new Date().getFullYear() - i;
+                            return (
+                              <option key={year} value={year}>{year}年</option>
+                            );
+                          })}
+                        </select>
+                      </div>
+                    </div>
+
+                    {/* 年別サマリー */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-green-600 text-sm font-medium">年間収入</p>
+                            <p className="text-xl font-bold text-green-700">¥{yearlyIncome.toLocaleString()}</p>
+                          </div>
+                          <TrendingUp className="h-6 w-6 text-green-600" />
+                        </div>
+                      </div>
+                      
+                      <div className="bg-red-50 p-4 rounded-lg border border-red-200">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-red-600 text-sm font-medium">年間支出</p>
+                            <p className="text-xl font-bold text-red-700">¥{yearlyExpense.toLocaleString()}</p>
+                          </div>
+                          <TrendingDown className="h-6 w-6 text-red-600" />
+                        </div>
+                      </div>
+                      
+                      <div className={`p-4 rounded-lg border ${
+                        (yearlyIncome - yearlyExpense) >= 0 
+                          ? 'bg-blue-50 border-blue-200' 
+                          : 'bg-orange-50 border-orange-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className={`text-sm font-medium ${
+                              (yearlyIncome - yearlyExpense) >= 0 ? 'text-blue-600' : 'text-orange-600'
+                            }`}>年間収支</p>
+                            <p className={`text-xl font-bold ${
+                              (yearlyIncome - yearlyExpense) >= 0 ? 'text-blue-700' : 'text-orange-700'
+                            }`}>
+                              ¥{(yearlyIncome - yearlyExpense).toLocaleString()}
+                            </p>
+                          </div>
+                          <BarChart3 className={`h-6 w-6 ${
+                            (yearlyIncome - yearlyExpense) >= 0 ? 'text-blue-600' : 'text-orange-600'
+                          }`} />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 年間月別内訳 */}
+                  <div className="bg-white rounded-lg shadow-lg mb-8">
+                    <div className="p-6 border-b border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-700">{selectedYear}年 月別内訳</h2>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">月</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">収入</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">支出</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">収支</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {yearlyMonthlyBreakdown.map(month => (
+                            <tr key={month.month} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {month.monthName}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semibold">
+                                ¥{month.income.toLocaleString()}
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-red-600 font-semibold">
+                                ¥{month.expense.toLocaleString()}
+                              </td>
+                              <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
+                                month.balance >= 0 ? 'text-blue-600' : 'text-orange-600'
+                              }`}>
+                                ¥{month.balance.toLocaleString()}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* 年別履歴 */}
+                  <div className="bg-white rounded-lg shadow-lg">
+                    <div className="p-6 border-b border-gray-200">
+                      <h2 className="text-xl font-semibold text-gray-700">年別履歴</h2>
+                    </div>
+                    
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">年</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">収入</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">支出</th>
+                            <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">収支</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {yearlyHistory.map(year => (
+                            <tr key={year.year} className="hover:bg-gray-50">
+                              <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                {year.year}年
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-semib<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>家計簿アプリ - Family Budget App</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+        const { PlusCircle, MinusCircle, Trash2, Calendar, DollarSign, TrendingUp, TrendingDown, BarChart3, PieChart, CalendarDays, Download, Upload, Share2, Copy, Edit, X, Check } = lucide;
+
+        const HouseholdBudgetApp = () => {
+          const [transactions, setTransactions] = useState([]);
+          const [amount, setAmount] = useState('');
+          const [category, setCategory] = useState('');
+          const [description, setDescription] = useState('');
+          const [type, setType] = useState('expense');
+          const [filter, setFilter] = useState('all');
+          const [activeTab, setActiveTab] = useState('dashboard');
+          const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+          const [selectedYear, setSelectedYear] = useState(new Date().getFullYear().toString());
+          const [shareUrl, setShareUrl] = useState('');
+          const [showCopyMessage, setShowCopyMessage] = useState(false);
+          
+          // エクスポート用の期間設定
+          const [exportPeriod, setExportPeriod] = useState('all');
+          const [exportStartDate, setExportStartDate] = useState('');
+          const [exportEndDate, setExportEndDate] = useState('');
+          
+          // 今日の日付を正確に取得
+          const getTodayString = () => {
+            const today = new Date();
+            return today.getFullYear() + '-' + 
+                   String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(today.getDate()).padStart(2, '0');
+          };
+          
+          const [transactionDate, setTransactionDate] = useState(getTodayString());
+          const [editingTransaction, setEditingTransaction] = useState(null);
+
+          // localStorageからデータを読み込み
+          useEffect(() => {
+            try {
+              const savedTransactions = localStorage.getItem('household_transactions');
+              if (savedTransactions) {
+                const parsedTransactions = JSON.parse(savedTransactions);
+                setTransactions(parsedTransactions);
+              }
+            } catch (error) {
+              console.error('保存データの読み込みに失敗しました:', error);
+            }
+          }, []);
+
+          // データが変更されたときにlocalStorageに自動保存
+          useEffect(() => {
+            try {
+              localStorage.setItem('household_transactions', JSON.stringify(transactions));
+            } catch (error) {
+              console.error('データの保存に失敗しました:', error);
+            }
+          }, [transactions]);
+
+          // カテゴリの選択肢と説明
+          const expenseCategories = {
+            '固定費': [
+              { name: '住居費', description: '家賃、住宅ローン、駐車場代などの支出項目' },
+              { name: '水道光熱費', description: '水道代、電気代、ガス代などの支出項目' },
+              { name: '通信費', description: 'スマホ料金、インターネット料金、宅配便料金などの支出項目' },
+              { name: '保険料', description: '生命保険や医療保険、介護保険などの支出項目' }
+            ],
+            '変動費': [
+              { name: '食費', description: '外食費や食材購入費、酒代など飲食に関わる支出項目' },
+              { name: '日用品費', description: '掃除道具やシャンプー、ティッシュペーパーなど日用品の支出項目' },
+              { name: '被服費', description: '洋服や靴、アクセサリーなどの支出項目' },
+              { name: '美容費', description: '化粧品やエステなどの支出項目' },
+              { name: '交際費', description: 'デートや飲み会、友人・知人へのプレゼントなどの支出項目' },
+              { name: '趣味費', description: '書籍代や映画チケット代など趣味に関する支出項目' },
+              { name: '交通費', description: '電車やバスの運賃、ガソリン代などの支出項目' },
+              { name: '教育費', description: '子どもの学費や教材の購入費などの支出項目' },
+              { name: '医療費', description: '通院費や入院費、医薬品の購入費などの支出項目' },
+              { name: '特別費', description: 'イベントなど、毎月発生しない支出の項目' },
+              { name: '雑費', description: '上記以外、用途不明の支出項目' }
+            ]
+          };
+          const incomeCategories = ['給与', 'ボーナス', '副業', 'その他'];
+
+          // 選択されたカテゴリの説明を取得
+          const getCategoryDescription = (categoryName) => {
+            if (!categoryName || type === 'income') return '';
+            
+            for (const group of Object.values(expenseCategories)) {
+              const found = group.find(item => item.name === categoryName);
+              if (found) return found.description;
+            }
+            return '';
+          };
+
+          // URLからデータを読み込み（共有URL機能）
+          useEffect(() => {
+            const urlParams = new URLSearchParams(window.location.search);
+            const sharedData = urlParams.get('data');
+            if (sharedData) {
+              try {
+                const decodedData = JSON.parse(atob(sharedData));
+                setTransactions(decodedData);
+                localStorage.setItem('household_transactions', JSON.stringify(decodedData));
+              } catch (error) {
+                console.error('共有データの読み込みに失敗しました:', error);
+              }
+            }
+          }, []);
+
+          // 期間に基づいてトランザクションをフィルタリング
+          const getFilteredTransactions = () => {
+            if (exportPeriod === 'all') {
+              return transactions;
+            }
+            
+            const today = new Date();
+            let startDate, endDate;
+            
+            switch (exportPeriod) {
+              case 'current-month':
+                startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+                endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+                break;
+              case 'current-year':
+                startDate = new Date(today.getFullYear(), 0, 1);
+                endDate = new Date(today.getFullYear(), 11, 31);
+                break;
+              case 'custom':
+                if (!exportStartDate || !exportEndDate) return [];
+                startDate = new Date(exportStartDate);
+                endDate = new Date(exportEndDate);
+                break;
+              default:
+                return transactions;
+            }
+            
+            const startDateStr = startDate.toISOString().split('T')[0];
+            const endDateStr = endDate.toISOString().split('T')[0];
+            
+            return transactions.filter(transaction => {
+              return transaction.date >= startDateStr && transaction.date <= endDateStr;
+            });
+          };
+
+          // データをエクスポート（JSONファイルとしてダウンロード）
+          const exportData = () => {
+            const filteredTransactions = getFilteredTransactions();
+            const dataToExport = {
+              transactions: filteredTransactions,
+              exportDate: new Date().toISOString(),
+              period: exportPeriod,
+              startDate: exportPeriod === 'custom' ? exportStartDate : null,
+              endDate: exportPeriod === 'custom' ? exportEndDate : null,
+              version: '1.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(dataToExport, null, 2)], {
+              type: 'application/json'
+            });
+            
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            const today = new Date();
+            let filename = '家計簿データ';
+            if (exportPeriod === 'current-month') {
+              filename += `_${today.getFullYear()}年${today.getMonth() + 1}月`;
+            } else if (exportPeriod === 'current-year') {
+              filename += `_${today.getFullYear()}年`;
+            } else if (exportPeriod === 'custom' && exportStartDate && exportEndDate) {
+              filename += `_${exportStartDate}_${exportEndDate}`;
+            } else {
+              filename += `_全期間`;
+            }
+            filename += `_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.json`;
+            
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          };
+
+          // データをCSVファイルとしてダウンロード
+          const exportCSV = () => {
+            const filteredTransactions = getFilteredTransactions();
+            const headers = ['日付', '種類', 'カテゴリ', '金額', '説明'];
+            const csvData = [headers];
+            
+            const sortedTransactions = [...filteredTransactions].sort((a, b) => new Date(b.date) - new Date(a.date));
+            
+            sortedTransactions.forEach(transaction => {
+              csvData.push([
+                transaction.date,
+                transaction.type === 'income' ? '収入' : '支出',
+                transaction.category,
+                transaction.amount,
+                transaction.description || ''
+              ]);
+            });
+            
+            const csvString = '\uFEFF' + csvData.map(row => 
+              row.map(cell => {
+                if (typeof cell === 'string' && (cell.includes(',') || cell.includes('"') || cell.includes('\n'))) {
+                  return `"${cell.replace(/"/g, '""')}"`;
+                }
+                return cell;
+              }).join(',')
+            ).join('\n');
+            
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            
+            const today = new Date();
+            let filename = '家計簿データ';
+            if (exportPeriod === 'current-month') {
+              filename += `_${today.getFullYear()}年${today.getMonth() + 1}月`;
+            } else if (exportPeriod === 'current-year') {
+              filename += `_${today.getFullYear()}年`;
+            } else if (exportPeriod === 'custom' && exportStartDate && exportEndDate) {
+              filename += `_${exportStartDate}_${exportEndDate}`;
+            } else {
+              filename += `_全期間`;
+            }
+            filename += `_${new Date().toLocaleDateString('ja-JP').replace(/\//g, '-')}.csv`;
+            
+            link.download = filename;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+          };
+
+          // データをインポート
+          const importData = (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+              try {
+                const content = e.target.result;
+                
+                if (file.name.endsWith('.csv')) {
+                  const lines = content.split('\n');
+                  const headers = lines[0].split(',');
+                  
+                  const expectedHeaders = ['日付', '種類', 'カテゴリ', '金額', '説明'];
+                  const isValidCSV = expectedHeaders.every(header => 
+                    headers.some(h => h.trim().replace(/"/g, '') === header)
+                  );
+                  
+                  if (!isValidCSV) {
+                    alert('無効なCSVファイル形式です。正しいテンプレートを使用してください。');
+                    return;
+                  }
+                  
+                  const importedTransactions = [];
+                  for (let i = 1; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line) continue;
+                    
+                    const values = line.split(',').map(v => v.trim().replace(/^"|"$/g, ''));
+                    
+                    if (values.length >= 4) {
+                      const transaction = {
+                        id: Date.now() + i,
+                        date: values[0],
+                        type: values[1] === '収入' ? 'income' : 'expense',
+                        category: values[2],
+                        amount: parseFloat(values[3]) || 0,
+                        description: values[4] || '',
+                        displayDate: new Date(values[0]).toLocaleDateString('ja-JP')
+                      };
+                      importedTransactions.push(transaction);
+                    }
+                  }
+                  
+                  if (importedTransactions.length > 0) {
+                    setTransactions(importedTransactions);
+                    localStorage.setItem('household_transactions', JSON.stringify(importedTransactions));
+                    alert(`${importedTransactions.length}件の取引データをインポートしました！`);
+                  } else {
+                    alert('インポートできるデータがありませんでした。');
+                  }
+                } else {
+                  const importedData = JSON.parse(content);
+                  if (importedData.transactions && Array.isArray(importedData.transactions)) {
+                    setTransactions(importedData.transactions);
+                    localStorage.setItem('household_transactions', JSON.stringify(importedData.transactions));
+                    alert('データのインポートが完了しました！');
+                  } else {
+                    alert('無効なファイル形式です。');
+                  }
+                }
+              } catch (error) {
+                alert('ファイルの読み込みに失敗しました。ファイル形式を確認してください。');
+                console.error('Import error:', error);
+              }
+            };
+            reader.readAsText(file);
+          };
+
+          // 共有URLを生成
+          const generateShareUrl = () => {
+            const encodedData = btoa(JSON.stringify(transactions));
+            const baseUrl = window.location.origin + window.location.pathname;
+            const url = `${baseUrl}?data=${encodedData}`;
+            setShareUrl(url);
+            return url;
+          };
+
+          // URLをクリップボードにコピー
+          const copyToClipboard = async () => {
+            try {
+              const url = shareUrl || generateShareUrl();
+              await navigator.clipboard.writeText(url);
+              setShowCopyMessage(true);
+              setTimeout(() => setShowCopyMessage(false), 2000);
+            } catch (error) {
+              const textArea = document.createElement('textarea');
+              textArea.value = shareUrl || generateShareUrl();
+              document.body.appendChild(textArea);
+              textArea.select();
+              document.execCommand('copy');
+              document.body.removeChild(textArea);
+              setShowCopyMessage(true);
+              setTimeout(() => setShowCopyMessage(false), 2000);
+            }
+          };
+
+          // データをクリア
+          const clearAllData = () => {
+            if (confirm('すべてのデータを削除しますか？この操作は元に戻せません。')) {
+              setTransactions([]);
+              setShareUrl('');
+              localStorage.removeItem('household_transactions');
+              alert('すべてのデータを削除しました。');
+            }
+          };
+
+          // 取引を追加
+          const addTransaction = () => {
+            if (!amount || !category) return;
+            
+            const newTransaction = {
+              id: Date.now(),
+              amount: parseFloat(amount),
+              category,
+              description,
+              type,
+              date: transactionDate,
+              displayDate: new Date(transactionDate).toLocaleDateString('ja-JP')
+            };
+            
+            setTransactions([newTransaction, ...transactions]);
+            setAmount('');
+            setCategory('');
+            setDescription('');
+          };
+
+          // 取引を編集
+          const editTransaction = (transaction) => {
+            setEditingTransaction(transaction);
+            setAmount(transaction.amount.toString());
+            setCategory(transaction.category);
+            setDescription(transaction.description);
+            setType(transaction.type);
+            setTransactionDate(transaction.date);
+          };
+
+          // 編集をキャンセル
+          const cancelEdit = () => {
+            setEditingTransaction(null);
+            setAmount('');
+            setCategory('');
+            setDescription('');
+            setType('expense');
+            setTransactionDate(getTodayString());
+          };
+
+          // 編集を保存
+          const saveEdit = () => {
+            if (!amount || !category) return;
+            
+            const updatedTransaction = {
+              ...editingTransaction,
+              amount: parseFloat(amount),
+              category,
+              description,
+              type,
+              date: transactionDate,
+              displayDate: new Date(transactionDate).toLocaleDateString('ja-JP')
+            };
+            
+            setTransactions(transactions.map(t => 
+              t.id === editingTransaction.id ? updatedTransaction : t
+            ));
+            
+            cancelEdit();
+          };
+
+          // 取引を削除
+          const deleteTransaction = (id) => {
+            setTransactions(transactions.filter(t => t.id !== id));
+          };
+
+          // 月別データを取得
+          const getMonthlyData = (month) => {
+            return transactions.filter(t => t.date.startsWith(month));
+          };
+
+          // 年別データを取得
+          const getYearlyData = (year) => {
+            return transactions.filter(t => t.date.startsWith(year));
+          };
+
+          // 当日の取引のみを取得（ダッシュボード用）
+          const todaysTransactions = transactions.filter(t => {
+            const today = new Date();
+            const todayString = today.getFullYear() + '-' + 
+                               String(today.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(today.getDate()).padStart(2, '0');
+            
+            const matchesDate = t.date === todayString;
+            const matchesFilter = filter === 'all' || t.type === filter;
+            return matchesDate && matchesFilter;
+          });
+
+          // フィルタリングされた取引
+          const filteredTransactions = transactions.filter(t => 
+            filter === 'all' || t.type === filter
+          );
+
+          // 現在選択されている月のデータ
+          const currentMonthData = getMonthlyData(selectedMonth);
+          
+          // 現在選択されている年のデータ
+          const currentYearData = getYearlyData(selectedYear);
+          
+          // 全体の合計
+          const totalIncome = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+          
+          const totalExpense = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+          
+          const balance = totalIncome - totalExpense;
+
+          // 月別合計
+          const monthlyIncome = currentMonthData
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+          
+          const monthlyExpense = currentMonthData
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          // 年別合計
+          const yearlyIncome = currentYearData
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+          
+          const yearlyExpense = currentYearData
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          // カテゴリ別支出分析
+          const getCategoryAnalysis = (data) => {
+            const expenseData = data.filter(t => t.type === 'expense');
+            const categoryTotals = {};
+            
+            expenseData.forEach(t => {
+              categoryTotals[t.category] = (categoryTotals[t.category] || 0) + t.amount;
+            });
+            
+            const totalExpenseAmount = Object.values(categoryTotals).reduce((sum, amount) => sum + amount, 0);
+            
+            return Object.entries(categoryTotals)
+              .map(([category, amount]) => ({
+                category,
+                amount,
+                percentage: totalExpenseAmount > 0 ? (amount / totalExpenseAmount * 100).toFixed(1) : 0
+              }))
+              .sort((a, b) => b.amount - a.amount);
+          };
+
+          // 月別履歴を生成
+          const getMonthlyHistory = () => {
+            const monthlyData = {};
+            transactions.forEach(t => {
+              const month = t.date.slice(0, 7);
+              if (!monthlyData[month]) {
+                monthlyData[month] = { income: 0, expense: 0 };
+              }
+              monthlyData[month][t.type] += t.amount;
+            });
+            
+            return Object.entries(monthlyData)
+              .map(([month, data]) => ({
+                month,
+                income: data.income,
+                expense: data.expense,
+                balance: data.income - data.expense
+              }))
+              .sort((a, b) => b.month.localeCompare(a.month));
+          };
+
+          // 年別履歴を生成
+          const getYearlyHistory = () => {
+            const yearlyData = {};
+            transactions.forEach(t => {
+              const year = t.date.slice(0, 4);
+              if (!yearlyData[year]) {
+                yearlyData[year] = { income: 0, expense: 0 };
+              }
+              yearlyData[year][t.type] += t.amount;
+            });
+            
+            return Object.entries(yearlyData)
+              .map(([year, data]) => ({
+                year,
+                income: data.income,
+                expense: data.expense,
+                balance: data.income - data.expense
+              }))
+              .sort((a, b) => b.year.localeCompare(a.year));
+          };
+
+          // 年間月別データを生成
+          const getYearlyMonthlyBreakdown = (year) => {
+            const monthlyBreakdown = [];
+            for (let i = 1; i <= 12; i++) {
+              const monthStr = `${year}-${i.toString().padStart(2, '0')}`;
+              const monthData = getMonthlyData(monthStr);
+              const income = monthData.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0);
+              const expense = monthData.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0);
+              
+              monthlyBreakdown.push({
+                month: i,
+                monthStr,
+                monthName: new Date(year, i - 1).toLocaleDateString('ja-JP', { month: 'long' }),
+                income,
+                expense,
+                balance: income - expense
+              });
+            }
+            return monthlyBreakdown;
+          };
+
+          const monthlyHistory = getMonthlyHistory();
+          const yearlyHistory = getYearlyHistory();
+          const categoryAnalysis = getCategoryAnalysis(currentMonthData);
+          const yearlyCategoryAnalysis = getCategoryAnalysis(currentYearData);
+          const yearlyMonthlyBreakdown = getYearlyMonthlyBreakdown(selectedYear);
+
+          return (
+            <div className="max-w-6xl mx-auto p-6 bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
+              <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">家計簿アプリ</h1>
+              
+              {/* タブナビゲーション */}
+              <div className="flex space-x-1 mb-8 bg-white p-1 rounded-lg shadow-md overflow-x-auto">
+                <button
+                  onClick={() => setActiveTab('dashboard')}
+                  className={`flex-shrink-0 py-3 px-4 rounded-md font-medium transition-colors ${
+                    activeTab === 'dashboard' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  ダッシュボード
+                </button>
+                <button
+                  onClick={() => setActiveTab('monthly')}
+                  className={`flex-shrink-0 py-3 px-4 rounded-md font-medium transition-colors ${
+                    activeTab === 'monthly' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  月別データ
+                </button>
+                <button
+                  onClick={() => setActiveTab('yearly')}
+                  className={`flex-shrink-0 py-3 px-4 rounded-md font-medium transition-colors ${
+                    activeTab === 'yearly' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  年別データ
+                </button>
+                <button
+                  onClick={() => setActiveTab('analysis')}
+                  className={`flex-shrink-0 py-3 px-4 rounded-md font-medium transition-colors ${
+                    activeTab === 'analysis' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  支出分析
+                </button>
+                <button
+                  onClick={() => setActiveTab('backup')}
+                  className={`flex-shrink-0 py-3 px-4 rounded-md font-medium transition-colors ${
+                    activeTab === 'backup' ? 'bg-blue-500 text-white' : 'text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  共有・バックアップ
+                </button>
+              </div>
+
+              {/* ダッシュボードタブ */}
+              {activeTab === 'dashboard' && (
+                <>
+                  {/* サマリーカード */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+                    <div className="bg-green-100 p-4 rounded-lg shadow-md">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-green-600 text-sm font-medium">総収入</p>
+                          <p className="text-2xl font-bold text-green-700">¥{totalIncome.toLocaleString()}</p>
+                        </div>
+                        <TrendingUp className="h-8 w-8 text-green-600" />
+                      </div>
+                    </div>
+                    
+                    <div className="bg-red-100 p-4 rounded-lg shadow-md">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-red-600 text-sm font-medium">総支出</p>
+                          <p className="text-2xl font-bold text-red-700">¥{totalExpense.toLocaleString()}</p>
+                        </div>
+                        <TrendingDown className="h-8 w-8 text-red-600" />
+                      </div>
+                    </div>
+                    
+                    <div className={`p-4 rounded-lg shadow-md ${balance >= 0 ? 'bg-blue-100' : 'bg-orange-100'}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className={`text-sm font-medium ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`}>残高</p>
+                          <p className={`text-2xl font-bold ${balance >= 0 ? 'text-blue-700' : 'text-orange-700'}`}>
+                            ¥{balance.toLocaleString()}
+                          </p>
+                        </div>
+                        <DollarSign className={`h-8 w-8 ${balance >= 0 ? 'text-blue-600' : 'text-orange-600'}`} />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 自動保存通知 */}
+                  {transactions.length > 0 && (
+                    <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-6">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0">
+                          <Check className="h-5 w-5 text-green-600" />
+                        </div>
+                        <div className="ml-3">
