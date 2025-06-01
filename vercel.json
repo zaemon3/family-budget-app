@@ -1,0 +1,10 @@
+{
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "installCommand": "npm install",
+  "env": {
+    "VITE_APP_NAME": "家族家計簿",
+    "VITE_APP_VERSION": "1.0.0"
+  }
+}
